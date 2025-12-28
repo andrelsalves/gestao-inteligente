@@ -14,6 +14,17 @@ import { Icons } from './constants';
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [currentView, setCurrentView] = useState<string>('DASHBOARD');
+  
+  // Settings state moved to App for persistence
+  const [settings, setSettings] = useState({
+    autoApprove: true,
+    emailNotifications: true,
+    emailReminder24h: true,
+    smsNotifications: false,
+    allowSupportChat: true,
+    dataSharing: false,
+  });
+
   const [appointments, setAppointments] = useState<Appointment[]>([
     {
       id: '1',
@@ -57,6 +68,18 @@ const App: React.FC = () => {
 
   const [notifications, setNotifications] = useState<{message: string, type: 'success' | 'error'} | null>(null);
 
+  // Load settings from localStorage on mount
+  useEffect(() => {
+    const savedSettings = localStorage.getItem('sst_pro_settings');
+    if (savedSettings) {
+      try {
+        setSettings(JSON.parse(savedSettings));
+      } catch (e) {
+        console.error("Erro ao carregar configurações:", e);
+      }
+    }
+  }, []);
+
   useEffect(() => {
     if (notifications) {
       const timer = setTimeout(() => setNotifications(null), 4000);
@@ -78,11 +101,11 @@ const App: React.FC = () => {
     const appointment: Appointment = {
       ...newApp,
       id: Math.random().toString(36).substr(2, 9),
-      status: 'PENDING'
+      status: settings.autoApprove ? 'CONFIRMED' : 'PENDING'
     };
     setAppointments(prev => [appointment, ...prev]);
     setNotifications({ 
-      message: `Agendamento realizado com sucesso para ${newApp.date}! Um e-mail foi enviado ao técnico responsável.`, 
+      message: `Agendamento realizado com sucesso para ${newApp.date}!`, 
       type: 'success' 
     });
   };
@@ -105,6 +128,11 @@ const App: React.FC = () => {
     });
   };
 
+  const updateSettings = (newSettings: typeof settings) => {
+    setSettings(newSettings);
+    localStorage.setItem('sst_pro_settings', JSON.stringify(newSettings));
+  };
+
   const renderView = () => {
     if (!user) return <LoginView onLogin={handleLogin} />;
 
@@ -120,9 +148,9 @@ const App: React.FC = () => {
       case 'COMPANIES':
         return <CompaniesListView companies={companies} setCompanies={setCompanies} />;
       case 'SUPPORT':
-        return <SupportView />;
+        return <SupportView user={user} />;
       case 'SETTINGS':
-        return <SettingsView />;
+        return <SettingsView settings={settings} onUpdateSettings={updateSettings} />;
       case 'PROFILE':
         return <ProfileView user={user} onLogout={handleLogout} />;
       default:
@@ -136,6 +164,7 @@ const App: React.FC = () => {
       return [
         { id: 'SCHEDULING', label: 'Agendar', icon: <Icons.Calendar /> },
         { id: 'HISTORY', label: 'Meus Agendamentos', icon: <Icons.History /> },
+        { id: 'SUPPORT', label: 'Suporte', icon: <Icons.Support /> },
         { id: 'PROFILE', label: 'Meu Perfil', icon: <Icons.User /> },
       ];
     }

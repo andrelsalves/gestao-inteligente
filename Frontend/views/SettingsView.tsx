@@ -1,18 +1,31 @@
 
 import React, { useState } from 'react';
 
-const SettingsView: React.FC = () => {
-  const [permissions, setPermissions] = useState({
-    autoApprove: true,
-    emailNotifications: true,
-    emailReminder24h: true,
-    smsNotifications: false,
-    allowSupportChat: true,
-    dataSharing: false,
-  });
+interface SettingsViewProps {
+  settings: {
+    autoApprove: boolean;
+    emailNotifications: boolean;
+    emailReminder24h: boolean;
+    smsNotifications: boolean;
+    allowSupportChat: boolean;
+    dataSharing: boolean;
+  };
+  onUpdateSettings: (newSettings: any) => void;
+}
 
-  const toggle = (key: keyof typeof permissions) => {
-    setPermissions(prev => ({ ...prev, [key]: !prev[key] }));
+const SettingsView: React.FC<SettingsViewProps> = ({ settings, onUpdateSettings }) => {
+  // Local temporary state for editing before saving
+  const [localSettings, setLocalSettings] = useState(settings);
+  const [showSuccess, setShowSuccess] = useState(false);
+
+  const toggle = (key: keyof typeof localSettings) => {
+    setLocalSettings(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const handleSave = () => {
+    onUpdateSettings(localSettings);
+    setShowSuccess(true);
+    setTimeout(() => setShowSuccess(false), 3000);
   };
 
   const sections = [
@@ -56,7 +69,15 @@ const SettingsView: React.FC = () => {
   ];
 
   return (
-    <div className="max-w-4xl mx-auto w-full space-y-10 animate-fadeIn pb-12">
+    <div className="max-w-4xl mx-auto w-full space-y-10 animate-fadeIn pb-12 relative">
+      {/* Local Success Notification */}
+      {showSuccess && (
+        <div className="fixed top-20 right-4 left-4 md:left-auto md:w-80 bg-emerald-600 text-white p-4 rounded-xl shadow-2xl z-[100] animate-bounce flex items-center gap-3">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+          <p className="font-bold text-sm">Configurações salvas com sucesso!</p>
+        </div>
+      )}
+
       <div>
         <h2 className="text-3xl font-bold">Configurações de Permissões</h2>
         <p className="text-slate-400 mt-1">Personalize o comportamento do sistema para toda a organização.</p>
@@ -72,16 +93,17 @@ const SettingsView: React.FC = () => {
 
             <div className="grid gap-4 mt-6">
               {section.items.map(item => {
-                // Check if this is a sub-option and if its parent is disabled
                 const isSubOption = 'parent' in item;
-                const parentEnabled = isSubOption ? permissions[item.parent as keyof typeof permissions] : true;
+                const parentEnabled = isSubOption ? localSettings[item.parent as keyof typeof localSettings] : true;
 
                 if (isSubOption && !parentEnabled) return null;
+
+                const isActive = localSettings[item.key as keyof typeof localSettings];
 
                 return (
                   <div 
                     key={item.key} 
-                    onClick={() => toggle(item.key as keyof typeof permissions)}
+                    onClick={() => toggle(item.key as keyof typeof localSettings)}
                     className={`flex items-center justify-between p-6 bg-slate-800 rounded-3xl border border-slate-700 hover:border-slate-600 transition-all cursor-pointer group shadow-lg
                       ${isSubOption ? 'ml-8 bg-slate-800/50 scale-[0.98]' : ''}
                     `}
@@ -96,8 +118,8 @@ const SettingsView: React.FC = () => {
                       <p className="text-xs text-slate-500 mt-1">{item.desc}</p>
                     </div>
                     
-                    <div className={`w-14 h-8 rounded-full transition-all relative ${permissions[item.key as keyof typeof permissions] ? 'bg-emerald-500' : 'bg-slate-700'}`}>
-                      <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all shadow-md ${permissions[item.key as keyof typeof permissions] ? 'left-7' : 'left-1'}`} />
+                    <div className={`w-14 h-8 rounded-full transition-all relative ${isActive ? 'bg-emerald-500' : 'bg-slate-700'}`}>
+                      <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all shadow-md ${isActive ? 'left-7' : 'left-1'}`} />
                     </div>
                   </div>
                 );
@@ -108,8 +130,16 @@ const SettingsView: React.FC = () => {
       </div>
 
       <div className="pt-8 border-t border-slate-700 flex justify-end gap-4">
-        <button className="px-8 py-3 bg-slate-800 hover:bg-slate-700 rounded-2xl font-bold transition-all">Descartar</button>
-        <button className="px-8 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-900 rounded-2xl font-bold transition-all shadow-lg shadow-emerald-500/20">
+        <button 
+          onClick={() => setLocalSettings(settings)}
+          className="px-8 py-3 bg-slate-800 hover:bg-slate-700 rounded-2xl font-bold transition-all"
+        >
+          Descartar
+        </button>
+        <button 
+          onClick={handleSave}
+          className="px-8 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-900 rounded-2xl font-bold transition-all shadow-lg shadow-emerald-500/20 active:scale-95"
+        >
           Salvar Alterações
         </button>
       </div>
