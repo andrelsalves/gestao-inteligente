@@ -1,0 +1,8 @@
+{
+  "name": "SST Pro - Gestão de Visitas Técnicas",
+  "description": "Sistema inteligente de agendamento de visitas técnicas de Segurança e Saúde no Trabalho, com painéis diferenciados para empresas e técnicos.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
