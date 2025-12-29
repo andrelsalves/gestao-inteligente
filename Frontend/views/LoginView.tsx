@@ -51,7 +51,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
 
       <div className="flex flex-col gap-6 items-center text-center">
         <h2 className="text-2xl font-bold leading-tight">
-          Gestão Inteligente para um trabalho mais seguro.
+          Gestão integrada de Segurança e Saúde Ocupacional.
         </h2>
         
         <div className="w-full max-w-sm space-y-4">
