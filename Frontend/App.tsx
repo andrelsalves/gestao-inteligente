@@ -10,75 +10,38 @@ import SettingsView from './views/SettingsView';
 import HistoryView from './views/HistoryView';
 import CompaniesListView from './views/CompaniesListView';
 import { Icons } from './constants';
+import { initialAppointments, initialCompanies, mockUsers } from './data/mockDb';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [currentView, setCurrentView] = useState<string>('DASHBOARD');
   
-  // Settings state moved to App for persistence
-  const [settings, setSettings] = useState({
-    autoApprove: true,
-    emailNotifications: true,
-    emailReminder24h: true,
-    smsNotifications: false,
-    allowSupportChat: true,
-    dataSharing: false,
-  });
+  const [appointments, setAppointments] = useState<Appointment[]>(initialAppointments);
+  const [companies, setCompanies] = useState<Company[]>(initialCompanies);
+  
+  const technicians = useMemo(() => mockUsers.filter(u => u.role === UserRole.TECNICO), []);
 
-  const [appointments, setAppointments] = useState<Appointment[]>([
-    {
-      id: '1',
-      companyId: 'comp1',
-      companyName: 'Tech Solutions Ltda',
-      technicianId: 'tech1',
-      date: '2024-09-15',
-      time: '09:00',
-      status: 'COMPLETED',
-      description: 'Inspeção de rotina NR-12'
-    },
-    {
-      id: '2',
-      companyId: 'comp2',
-      companyName: 'Metalúrgica Silva',
-      technicianId: 'tech1',
-      date: '2024-10-20',
-      time: '14:00',
-      status: 'CONFIRMED',
-      description: 'Renovação de PPRA/PCMSO'
-    }
-  ]);
-  const [companies, setCompanies] = useState<Company[]>([
-    {
-      id: 'comp1',
-      name: 'Tech Solutions Ltda',
-      cnpj: '12.345.678/0001-90',
-      contactEmail: 'contato@techsolutions.com',
-      phone: '(11) 98888-7777',
-      address: 'Av. Paulista, 1000 - São Paulo, SP'
-    },
-    {
-      id: 'comp2',
-      name: 'Metalúrgica Silva',
-      cnpj: '98.765.432/0001-21',
-      contactEmail: 'rh@metasilva.com.br',
-      phone: '(11) 97777-6666',
-      address: 'Rua das Indústrias, 50 - Diadema, SP'
-    }
-  ]);
-
-  const [notifications, setNotifications] = useState<{message: string, type: 'success' | 'error'} | null>(null);
-
-  // Load settings from localStorage on mount
-  useEffect(() => {
+  const [settings, setSettings] = useState(() => {
     const savedSettings = localStorage.getItem('sst_pro_settings');
     if (savedSettings) {
       try {
-        setSettings(JSON.parse(savedSettings));
+        return JSON.parse(savedSettings);
       } catch (e) {
         console.error("Erro ao carregar configurações:", e);
       }
     }
-  }, []);
+    return {
+      autoApprove: false,
+      emailNotifications: true,
+      emailReminder24h: true,
+      smsNotifications: false,
+      allowSupportChat: true,
+      dataSharing: false,
+    };
+  });
+
+  const [notifications, setNotifications] = useState<{message: string, type: 'success' | 'error'} | null>(null);
+  const [pendingAlerts, setPendingAlerts] = useState<string[]>([]);
 
   useEffect(() => {
     if (notifications) {
@@ -89,7 +52,9 @@ const App: React.FC = () => {
 
   const handleLogin = (u: User) => {
     setUser(u);
-    setCurrentView(u.role === UserRole.EMPRESA ? 'SCHEDULING' : 'DASHBOARD');
+    // Redirecionamento inicial baseado no papel
+    if (u.role === UserRole.EMPRESA) setCurrentView('SCHEDULING');
+    else setCurrentView('DASHBOARD');
   };
 
   const handleLogout = () => {
@@ -101,36 +66,47 @@ const App: React.FC = () => {
     const appointment: Appointment = {
       ...newApp,
       id: Math.random().toString(36).substr(2, 9),
-      status: settings.autoApprove ? 'CONFIRMED' : 'PENDING'
+      status: 'PENDING' 
     };
     setAppointments(prev => [appointment, ...prev]);
-    setNotifications({ 
-      message: `Agendamento realizado com sucesso para ${newApp.date}!`, 
-      type: 'success' 
-    });
+    setPendingAlerts(prev => [`Novo agendamento: ${newApp.companyName}`, ...prev]);
+    setNotifications({ message: `Solicitação enviada com sucesso!`, type: 'success' });
   };
 
   const deleteAppointment = (id: string) => {
     setAppointments(prev => prev.filter(app => app.id !== id));
-    setNotifications({ 
-      message: 'Agendamento removido com sucesso.', 
-      type: 'success' 
-    });
+    setNotifications({ message: 'Agendamento removido.', type: 'success' });
   };
 
   const updateAppointmentStatus = (id: string, status: Appointment['status']) => {
-    setAppointments(prev => prev.map(app => 
-      app.id === id ? { ...app, status } : app
-    ));
-    setNotifications({ 
-      message: `Status do agendamento atualizado para ${status}.`, 
-      type: 'success' 
-    });
+    setAppointments(prev => prev.map(app => app.id === id ? { ...app, status } : app));
+    setNotifications({ message: `Status atualizado.`, type: 'success' });
   };
 
   const updateSettings = (newSettings: typeof settings) => {
     setSettings(newSettings);
     localStorage.setItem('sst_pro_settings', JSON.stringify(newSettings));
+  };
+
+  const addCompany = (company: Omit<Company, 'id'>) => {
+    const newCompany = { ...company, id: Math.random().toString(36).substr(2, 9) };
+    setCompanies(prev => [...prev, newCompany]);
+    setNotifications({ message: 'Empresa cadastrada!', type: 'success' });
+  };
+
+  const updateCompany = (id: string, data: Omit<Company, 'id'>) => {
+    setCompanies(prev => prev.map(c => c.id === id ? { ...data, id } : c));
+    setNotifications({ message: 'Empresa atualizada!', type: 'success' });
+  };
+
+  const deleteCompany = (id: string) => {
+    setCompanies(prev => prev.filter(c => c.id !== id));
+    setNotifications({ message: 'Empresa removida.', type: 'success' });
+  };
+
+  const updateUserProfile = (updatedUser: User) => {
+    setUser(updatedUser);
+    setNotifications({ message: 'Perfil atualizado!', type: 'success' });
   };
 
   const renderView = () => {
@@ -139,22 +115,31 @@ const App: React.FC = () => {
     switch (currentView) {
       case 'DASHBOARD':
         return user.role === UserRole.EMPRESA ? 
-          <SchedulingView user={user} onSchedule={addAppointment} /> : 
-          <AdminDashboard appointments={appointments} companies={companies} onUpdateStatus={updateAppointmentStatus} />;
+          <SchedulingView user={user} appointments={appointments} onSchedule={addAppointment} /> : 
+          <AdminDashboard 
+            user={user}
+            appointments={appointments} 
+            companies={companies} 
+            onUpdateStatus={updateAppointmentStatus} 
+            pendingAlerts={pendingAlerts}
+            onClearAlerts={() => setPendingAlerts([])}
+          />;
       case 'SCHEDULING':
-        return <SchedulingView user={user} onSchedule={addAppointment} />;
+        return <SchedulingView user={user} appointments={appointments} onSchedule={addAppointment} />;
       case 'HISTORY':
-        return <HistoryView appointments={appointments} companies={companies} user={user} onDelete={deleteAppointment} />;
+        return <HistoryView appointments={appointments} companies={companies} technicians={technicians} user={user} onDelete={deleteAppointment} />;
       case 'COMPANIES':
-        return <CompaniesListView companies={companies} setCompanies={setCompanies} />;
+        return <CompaniesListView user={user} companies={companies} onAddCompany={addCompany} onUpdateCompany={updateCompany} onDeleteCompany={deleteCompany} />;
       case 'SUPPORT':
         return <SupportView user={user} />;
       case 'SETTINGS':
-        return <SettingsView settings={settings} onUpdateSettings={updateSettings} />;
+        return user.role === UserRole.ADMIN ? 
+          <SettingsView settings={settings} onUpdateSettings={updateSettings} onNavigate={(view) => setCurrentView(view)} /> :
+          <AdminDashboard user={user} appointments={appointments} companies={companies} onUpdateStatus={updateAppointmentStatus} pendingAlerts={pendingAlerts} onClearAlerts={() => setPendingAlerts([])} />;
       case 'PROFILE':
-        return <ProfileView user={user} onLogout={handleLogout} />;
+        return <ProfileView user={user} onLogout={handleLogout} onUpdateProfile={updateUserProfile} />;
       default:
-        return <AdminDashboard appointments={appointments} companies={companies} onUpdateStatus={updateAppointmentStatus} />;
+        return <AdminDashboard user={user} appointments={appointments} companies={companies} onUpdateStatus={updateAppointmentStatus} pendingAlerts={pendingAlerts} onClearAlerts={() => setPendingAlerts([])} />;
     }
   };
 
@@ -168,26 +153,30 @@ const App: React.FC = () => {
         { id: 'PROFILE', label: 'Meu Perfil', icon: <Icons.User /> },
       ];
     }
-    return [
-      { id: 'DASHBOARD', label: 'Painel', icon: <Icons.Dashboard /> },
-      { id: 'HISTORY', label: 'Histórico', icon: <Icons.History /> },
-      { id: 'COMPANIES', label: 'Empresas', icon: <Icons.Buildings /> },
-      { id: 'SUPPORT', label: 'Suporte', icon: <Icons.Support /> },
-      { id: 'SETTINGS', label: 'Ajustes', icon: <Icons.Settings /> },
-      { id: 'PROFILE', label: 'Perfil', icon: <Icons.User /> },
+    
+    const items = [
+      { id: 'DASHBOARD', label: user.role === UserRole.ADMIN ? 'Painel' : 'Minha Agenda', icon: <Icons.Dashboard /> },
+      { id: 'HISTORY', label: user.role === UserRole.ADMIN ? 'Histórico' : 'Minhas Visitas', icon: <Icons.History /> },
+      { id: 'COMPANIES', label: user.role === UserRole.ADMIN ? 'Empresas' : 'Clientes', icon: <Icons.Buildings /> },
+      { id: 'SUPPORT', label: 'Suporte IA', icon: <Icons.Support /> },
     ];
+
+    if (user.role === UserRole.ADMIN) {
+      items.push({ id: 'SETTINGS', label: 'Ajustes', icon: <Icons.Settings /> });
+    }
+
+    items.push({ id: 'PROFILE', label: 'Perfil', icon: <Icons.User /> });
+    return items;
   }, [user]);
 
   return (
     <div className="min-h-screen flex flex-col max-w-md mx-auto md:max-w-none md:flex-row bg-[#0f172a]">
-      {/* Notifications */}
       {notifications && (
         <div className={`fixed top-4 right-4 left-4 md:left-auto md:w-80 p-4 rounded-xl shadow-2xl z-[100] transition-all transform animate-bounce ${notifications.type === 'success' ? 'bg-emerald-600' : 'bg-red-600'} text-white`}>
           <p className="font-semibold text-sm">{notifications.message}</p>
         </div>
       )}
 
-      {/* Desktop Sidebar */}
       {user && (
         <aside className="hidden md:flex flex-col w-64 bg-[#1e293b] border-r border-slate-700 h-screen sticky top-0 p-6">
           <div className="flex items-center gap-2 mb-10">
@@ -208,7 +197,7 @@ const App: React.FC = () => {
           </nav>
           <div className="mt-auto border-t border-slate-700 pt-6">
             <div className="flex items-center gap-3 mb-4">
-              <img src={user.avatar || `https://picsum.photos/seed/${user.id}/40`} className="w-10 h-10 rounded-full border-2 border-emerald-500" />
+              <img src={user.avatar || `https://picsum.photos/seed/${user.id}/40`} className="w-10 h-10 rounded-full border-2 border-emerald-500 object-cover" />
               <div>
                 <p className="text-sm font-semibold text-white truncate w-32">{user.name}</p>
                 <p className="text-xs text-slate-400">{user.role}</p>
@@ -219,7 +208,6 @@ const App: React.FC = () => {
         </aside>
       )}
 
-      {/* Mobile Header */}
       {user && (
         <div className="md:hidden flex items-center justify-between p-4 bg-[#1e293b] border-b border-slate-700 sticky top-0 z-40">
            <div className="flex items-center gap-2">
@@ -232,24 +220,24 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* Main Content Area */}
       <main className="flex-1 flex flex-col p-4 md:p-8 overflow-y-auto pb-24 md:pb-8">
         {renderView()}
       </main>
 
-      {/* Mobile Bottom Nav */}
       {user && (
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-[#1e293b]/90 backdrop-blur-md border-t border-slate-700 px-6 py-3 flex justify-between items-center z-40">
-          {menuItems.slice(0, 4).map(item => (
-            <button
-              key={item.id}
-              onClick={() => setCurrentView(item.id)}
-              className={`flex flex-col items-center gap-1 transition-all active:scale-95 ${currentView === item.id ? 'text-emerald-500' : 'text-slate-400'}`}
-            >
-              <span className="scale-90">{item.icon}</span>
-              <span className="text-[10px] font-medium uppercase tracking-tighter">{item.label}</span>
-            </button>
-          ))}
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-[#1e293b]/90 backdrop-blur-md border-t border-slate-700 px-6 py-3 flex justify-between items-center z-40 overflow-x-auto no-scrollbar">
+          <div className="flex justify-between items-center w-full min-w-max gap-8 px-4">
+            {menuItems.map(item => (
+              <button
+                key={item.id}
+                onClick={() => setCurrentView(item.id)}
+                className={`flex flex-col items-center gap-1 transition-all active:scale-95 ${currentView === item.id ? 'text-emerald-500' : 'text-slate-400'}`}
+              >
+                <span className="scale-75">{item.icon}</span>
+                <span className="text-[9px] font-medium uppercase tracking-tighter whitespace-nowrap">{item.label}</span>
+              </button>
+            ))}
+          </div>
         </nav>
       )}
     </div>

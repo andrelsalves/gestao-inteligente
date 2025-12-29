@@ -11,9 +11,10 @@ interface SettingsViewProps {
     dataSharing: boolean;
   };
   onUpdateSettings: (newSettings: any) => void;
+  onNavigate: (view: string) => void;
 }
 
-const SettingsView: React.FC<SettingsViewProps> = ({ settings, onUpdateSettings }) => {
+const SettingsView: React.FC<SettingsViewProps> = ({ settings, onUpdateSettings, onNavigate }) => {
   // Local temporary state for editing before saving
   const [localSettings, setLocalSettings] = useState(settings);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -25,7 +26,12 @@ const SettingsView: React.FC<SettingsViewProps> = ({ settings, onUpdateSettings 
   const handleSave = () => {
     onUpdateSettings(localSettings);
     setShowSuccess(true);
-    setTimeout(() => setShowSuccess(false), 3000);
+    
+    // Redirect to dashboard after a short delay to show success feedback
+    setTimeout(() => {
+      setShowSuccess(false);
+      onNavigate('DASHBOARD');
+    }, 1500);
   };
 
   const sections = [
@@ -55,7 +61,6 @@ const SettingsView: React.FC<SettingsViewProps> = ({ settings, onUpdateSettings 
       title: 'Fluxo de Trabalho',
       desc: 'Regras de negócio para o processo de agendamento.',
       items: [
-        { key: 'autoApprove', label: 'Aprovação Automática', desc: 'Agendamentos em horários livres são confirmados imediatamente.' },
         { key: 'allowSupportChat', label: 'Chat de Suporte IA', desc: 'Habilita o assistente inteligente para dúvidas sobre NRs.' },
       ]
     },
@@ -74,7 +79,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ settings, onUpdateSettings 
       {showSuccess && (
         <div className="fixed top-20 right-4 left-4 md:left-auto md:w-80 bg-emerald-600 text-white p-4 rounded-xl shadow-2xl z-[100] animate-bounce flex items-center gap-3">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
-          <p className="font-bold text-sm">Configurações salvas com sucesso!</p>
+          <p className="font-bold text-sm">Configurações salvas! Redirecionando...</p>
         </div>
       )}
 
@@ -127,6 +132,11 @@ const SettingsView: React.FC<SettingsViewProps> = ({ settings, onUpdateSettings 
             </div>
           </section>
         ))}
+        <section className="p-6 bg-amber-500/10 border border-amber-500/30 rounded-3xl">
+          <p className="text-sm text-amber-500 font-semibold">
+            Nota: Todos os novos agendamentos agora requerem confirmação manual do técnico por padrão para garantir a revisão da disponibilidade.
+          </p>
+        </section>
       </div>
 
       <div className="pt-8 border-t border-slate-700 flex justify-end gap-4">
@@ -140,7 +150,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ settings, onUpdateSettings 
           onClick={handleSave}
           className="px-8 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-900 rounded-2xl font-bold transition-all shadow-lg shadow-emerald-500/20 active:scale-95"
         >
-          Salvar Alterações
+          Salvar e Voltar
         </button>
       </div>
     </div>

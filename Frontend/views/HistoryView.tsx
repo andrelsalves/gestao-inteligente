@@ -6,11 +6,12 @@ import { Icons } from '../constants';
 interface HistoryViewProps {
   appointments: Appointment[];
   companies: Company[];
+  technicians: User[];
   user: User;
   onDelete: (id: string) => void;
 }
 
-const HistoryView: React.FC<HistoryViewProps> = ({ appointments, companies, user, onDelete }) => {
+const HistoryView: React.FC<HistoryViewProps> = ({ appointments, companies, technicians, user, onDelete }) => {
   const [itemToDelete, setItemToDelete] = useState<Appointment | null>(null);
   const [itemForDetails, setItemForDetails] = useState<Appointment | null>(null);
 
@@ -36,6 +37,11 @@ const HistoryView: React.FC<HistoryViewProps> = ({ appointments, companies, user
   };
 
   const selectedCompany = itemForDetails ? companies.find(c => c.id === itemForDetails.companyId) : null;
+  
+  // Busca o técnico responsável pelo agendamento selecionado
+  const assignedTechnician = itemForDetails 
+    ? technicians.find(t => t.id === itemForDetails.technicianId) 
+    : null;
 
   return (
     <div className="space-y-8 animate-fadeIn relative min-h-[600px]">
@@ -114,10 +120,19 @@ const HistoryView: React.FC<HistoryViewProps> = ({ appointments, companies, user
               <div>
                 <p className="text-[10px] font-bold text-slate-500 uppercase mb-2">Responsável Técnico</p>
                 <div className="flex items-center gap-3 bg-slate-700/30 p-4 rounded-2xl">
-                  <div className="w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center text-slate-900 font-bold">CT</div>
+                  <div className="w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center text-slate-900 font-bold overflow-hidden">
+                    {assignedTechnician?.avatar ? (
+                      <img src={assignedTechnician.avatar} className="w-full h-full object-cover" />
+                    ) : (
+                      assignedTechnician?.name?.charAt(0) || '?'
+                    )}
+                  </div>
                   <div>
-                    <p className="text-sm font-bold text-white">Carlos Técnico (TR-998877)</p>
-                    <p className="text-xs text-slate-500">Engenheiro de Segurança do Trabalho</p>
+                    <p className="text-sm font-bold text-white">
+                      {assignedTechnician?.name || 'A definir'} 
+                      {assignedTechnician?.registrationNumber && ` (${assignedTechnician.registrationNumber})`}
+                    </p>
+                    <p className="text-xs text-slate-500">Técnico em Segurança do Trabalho</p>
                   </div>
                 </div>
               </div>

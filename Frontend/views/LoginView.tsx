@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { User, UserRole } from '../types';
 import { Icons } from '../constants';
+import { mockUsers } from '../data/mockDb';
 
 interface LoginViewProps {
   onLogin: (user: User) => void;
@@ -12,6 +13,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
   const [activeRole, setActiveRole] = useState<UserRole>(UserRole.EMPRESA);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => setLoading(false), 1500);
@@ -20,22 +22,21 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     
-    // Auto-fill mock users based on selection for demo purposes if fields are empty
-    // but in a real app we'd check credentials
-    const isEmpresa = activeRole === UserRole.EMPRESA;
-    
-    const mockUser: User = {
-      id: isEmpresa ? 'comp_user_1' : 'tech_user_1',
-      name: isEmpresa ? 'João da Empresa S.A.' : 'Carlos Técnico',
-      email: email || (isEmpresa ? 'cliente@empresa.com' : 'admin@sst.pro'),
-      role: isEmpresa ? UserRole.EMPRESA : UserRole.TECNICO,
-      companyName: isEmpresa ? 'Empresa S.A.' : undefined,
-      registrationNumber: !isEmpresa ? 'TR-998877' : undefined,
-      avatar: isEmpresa ? 'https://picsum.photos/seed/company/200' : 'https://picsum.photos/seed/tech/200'
-    };
-    
-    onLogin(mockUser);
+    // Simulação de busca no banco de dados
+    const userMatch = mockUsers.find(u => 
+      u.email.toLowerCase() === email.toLowerCase() && 
+      u.password === password
+    );
+
+    if (userMatch) {
+      // Retornamos apenas os dados públicos do usuário (sem a senha)
+      const { password: _, ...userData } = userMatch;
+      onLogin(userData);
+    } else {
+      setError('E-mail ou senha incorretos. Verifique as credenciais de demonstração abaixo.');
+    }
   };
 
   if (loading) {
@@ -74,7 +75,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
       {/* Login Card */}
       <div className="w-full max-w-[440px] bg-[#111111] border border-slate-800/50 rounded-[32px] p-10 shadow-2xl animate-fadeIn [animation-delay:200ms]">
         <form onSubmit={handleLogin} className="space-y-6">
-          {/* Role Switcher Tabs */}
+          {/* Role Switcher Tabs (Visual only to guide the user) */}
           <div className="flex p-1 bg-[#1a1a1a] rounded-2xl mb-8 border border-slate-800/50">
             <button
               type="button"
@@ -92,11 +93,18 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
             </button>
           </div>
 
+          {error && (
+            <div className="bg-red-500/10 border border-red-500/50 p-4 rounded-2xl text-red-500 text-xs font-medium text-center animate-shake">
+              {error}
+            </div>
+          )}
+
           <div className="space-y-2">
             <label className="text-sm font-semibold text-slate-300 block ml-1">E-mail corporativo</label>
             <input
               type="email"
-              placeholder={activeRole === UserRole.EMPRESA ? "cliente@empresa.com.br" : "admin@sst.pro"}
+              required
+              placeholder={activeRole === UserRole.EMPRESA ? "cliente@empresa.com" : "admin@sst.pro"}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full bg-[#1a1a1a] border border-slate-800 rounded-2xl py-4 px-5 text-white placeholder:text-slate-600 focus:outline-none focus:border-emerald-500/50 transition-all text-sm"
@@ -107,16 +115,12 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
             <label className="text-sm font-semibold text-slate-300 block ml-1">Senha</label>
             <input
               type="password"
+              required
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full bg-[#1a1a1a] border border-slate-800 rounded-2xl py-4 px-5 text-white placeholder:text-slate-600 focus:outline-none focus:border-emerald-500/50 transition-all text-sm"
             />
-            <div className="flex justify-end pt-1">
-              <button type="button" className="text-emerald-500 text-[11px] font-bold hover:text-emerald-400 transition-colors uppercase tracking-wider">
-                Esqueceu a senha?
-              </button>
-            </div>
           </div>
 
           <button
@@ -132,10 +136,13 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
           <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">Ambiente de Demonstração:</p>
           <div className="space-y-2 text-[11px]">
             <p className="text-slate-400 font-medium">
-              Use <span className="text-emerald-500 font-bold">admin@sst.pro</span> para visão completa
+              Admin: <span className="text-emerald-500 font-bold">admin@sst.pro</span> / <span className="text-white">admin</span>
             </p>
             <p className="text-slate-400 font-medium">
-              Use <span className="text-blue-400 font-bold">cliente@empresa.com</span> para visão empresa
+              Empresa: <span className="text-blue-400 font-bold">cliente@empresa.com</span> / <span className="text-white">123</span>
+            </p>
+            <p className="text-slate-400 font-medium">
+              Técnico: <span className="text-emerald-500 font-bold">carlos@sst.pro</span> / <span className="text-white">123</span>
             </p>
           </div>
         </div>
@@ -144,6 +151,14 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
           Protegido por criptografia de ponta a ponta.
         </p>
       </div>
+      <style>{`
+        @keyframes shake {
+          0%, 100% { transform: translateX(0); }
+          25% { transform: translateX(-5px); }
+          75% { transform: translateX(5px); }
+        }
+        .animate-shake { animation: shake 0.3s ease-in-out; }
+      `}</style>
     </div>
   );
 };

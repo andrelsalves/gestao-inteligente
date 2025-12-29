@@ -26,6 +26,12 @@ const SupportView: React.FC<SupportViewProps> = ({ user }) => {
   const [isTyping, setIsTyping] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Form state for Company Support
+  const [subject, setSubject] = useState('');
+  const [message, setMessage] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSent, setIsSent] = useState(false);
+
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -47,35 +53,104 @@ const SupportView: React.FC<SupportViewProps> = ({ user }) => {
     setIsTyping(false);
   };
 
-  const handleEmailTechnician = () => {
-    const subject = encodeURIComponent(`Suporte SST Pro - Dúvida de ${user.companyName || user.name}`);
-    const body = encodeURIComponent(`Olá técnico responsável,\n\nGostaria de suporte para a seguinte questão:\n\n[Descreva sua dúvida aqui]\n\nAtenciosamente,\n${user.name}`);
-    window.location.href = `mailto:suporte@sstpro.com.br?subject=${subject}&body=${body}`;
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!subject || !message) return;
+    
+    setIsSubmitting(true);
+    // Simulate API call
+    setTimeout(() => {
+      setIsSubmitting(false);
+      setIsSent(true);
+      setSubject('');
+      setMessage('');
+      setTimeout(() => setIsSent(false), 3000);
+    }, 1200);
   };
 
+  // UI for EMPRESA (Company)
+  if (user.role === UserRole.EMPRESA) {
+    return (
+      <div className="max-w-2xl mx-auto w-full space-y-8 animate-fadeIn py-8">
+        <div>
+          <h2 className="text-3xl font-bold text-white">Central de Atendimento</h2>
+          <p className="text-slate-400 mt-1">Sua solicitação será encaminhada diretamente para nossa equipe técnica.</p>
+        </div>
+
+        <div className="bg-slate-800 rounded-3xl border border-slate-700 shadow-2xl p-8 relative overflow-hidden">
+          {isSent && (
+            <div className="absolute inset-0 bg-emerald-500/10 backdrop-blur-md z-10 flex flex-col items-center justify-center p-6 text-center animate-fadeIn">
+              <div className="w-16 h-16 bg-emerald-500 rounded-full flex items-center justify-center text-slate-900 mb-4 shadow-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+              </div>
+              <h3 className="text-xl font-bold text-white">Solicitação Enviada!</h3>
+              <p className="text-slate-300 text-sm mt-2">Em breve um técnico entrará em contato.</p>
+            </div>
+          )}
+
+          <form onSubmit={handleFormSubmit} className="space-y-6">
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Assunto</label>
+              <input 
+                required
+                type="text" 
+                value={subject}
+                onChange={e => setSubject(e.target.value)}
+                placeholder="Ex: Dúvida sobre NR-12 ou Agendamento"
+                className="w-full bg-slate-900/50 border border-slate-700 rounded-xl p-4 text-white focus:border-emerald-500 outline-none transition-all"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Mensagem Detalhada</label>
+              <textarea 
+                required
+                value={message}
+                onChange={e => setMessage(e.target.value)}
+                placeholder="Descreva aqui sua dúvida ou solicitação..."
+                className="w-full bg-slate-900/50 border border-slate-700 rounded-xl p-4 text-white focus:border-emerald-500 outline-none transition-all min-h-[150px] resize-none"
+              />
+            </div>
+            
+            <button 
+              type="submit"
+              disabled={isSubmitting}
+              className={`w-full py-4 rounded-2xl font-black text-lg transition-all shadow-xl active:scale-95 flex items-center justify-center gap-3
+                ${isSubmitting ? 'bg-slate-700 text-slate-500' : 'bg-emerald-500 hover:bg-emerald-400 text-slate-900'}
+              `}
+            >
+              {isSubmitting ? (
+                <div className="w-6 h-6 border-4 border-slate-500 border-t-emerald-500 rounded-full animate-spin" />
+              ) : (
+                <>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+                  Enviar Mensagem
+                </>
+              )}
+            </button>
+          </form>
+        </div>
+
+        <div className="bg-slate-900/40 p-6 rounded-2xl border border-slate-700/50 flex items-center gap-6">
+          <div className="w-12 h-12 bg-slate-800 rounded-xl flex items-center justify-center text-emerald-500">
+             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+          </div>
+          <div>
+            <p className="text-sm font-bold text-white">Prefere falar por telefone?</p>
+            <p className="text-xs text-slate-500">0800 123 4567 • Atendimento em horário comercial</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // UI for ADMIN/TECNICO (Intelligent Support)
   return (
     <div className="h-full flex flex-col space-y-6 animate-fadeIn">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold">Suporte Técnico Inteligente</h2>
+          <h2 className="text-2xl font-bold text-white">Suporte Técnico Inteligente</h2>
           <p className="text-slate-400">Tire suas dúvidas sobre NRs e procedimentos em tempo real.</p>
         </div>
-        
-        {user.role === UserRole.EMPRESA && (
-          <div className="bg-slate-800/50 p-4 rounded-2xl border border-slate-700 flex items-center gap-4">
-            <div className="hidden sm:block">
-              <p className="text-xs font-bold text-white uppercase tracking-wider">A IA não resolveu?</p>
-              <p className="text-[10px] text-slate-500">Fale com o técnico responsável.</p>
-            </div>
-            <button 
-              onClick={handleEmailTechnician}
-              className="bg-slate-700 hover:bg-slate-600 text-emerald-500 px-4 py-2 rounded-xl text-xs font-bold transition-all border border-emerald-500/20 flex items-center gap-2"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
-              Enviar E-mail
-            </button>
-          </div>
-        )}
       </div>
 
       <div className="flex-1 bg-slate-800 rounded-3xl border border-slate-700 overflow-hidden flex flex-col min-h-[500px] shadow-2xl">
